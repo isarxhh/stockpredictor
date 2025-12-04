@@ -31,7 +31,13 @@ justify-content:space-between; border:1px solid #f3f4f6; }
 [data-testid="column"]{ padding-right:10px; }
 .status-row{ display:flex; align-items:center; gap:8px; }
 .status-dot{ width:12px; height:12px; border-radius:50%; background:#22c55e; }
-</style>
+ [data-testid="stSidebar"] {
+        display: none;
+    }
+    /* Hide Streamlit header & hamburger menu */
+    header {visibility: hidden;}
+    .css-18e3th9 {visibility: hidden;}
+    </style>
 """,
     unsafe_allow_html=True,
 )
