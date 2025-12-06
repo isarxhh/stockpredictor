@@ -40,7 +40,7 @@ st.markdown(
     "<div class='header'>AI Stock Prediction Dashboard</div>", unsafe_allow_html=True
 )
 st.markdown(
-    "<div class='subtle'>Yahoo Finance + simple LSTM</div>",
+    "<div class='subtle'>Yahoo Finance + TwelveData API + simple LSTM</div>",
     unsafe_allow_html=True,
 )
 
