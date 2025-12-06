@@ -23,7 +23,7 @@ st.markdown(
 .header { font-size:28px; font-weight:700; background: linear-gradient(90deg,#005bea,#00c6fb);
 -webkit-background-clip: text; -webkit-text-fill-color: transparent; padding-bottom: 4px; }
 .subtle { color: #6b7280; margin-top: -10px; margin-bottom: 10px; }
-.card { background: white; border-radius: 12px; padding: 18px 20px; height:0px; margin:30px 0;
+.card { background: transparent; border: 1px solid #343a42 !important; border-radius: 12px; padding: 18px 20px; height:0px; margin:30px 0;
 box-shadow: 0 6px 18px rgba(0,0,0,0.06); min-height: 120px; display:flex; flex-direction:column; 
 justify-content:space-between; border:1px solid #f3f4f6; }
 .metric-title { color:#6b7280; font-size:12px; margin-bottom:6px; }
@@ -31,16 +31,18 @@ justify-content:space-between; border:1px solid #f3f4f6; }
 [data-testid="column"]{ padding-right:10px; }
 .status-row{ display:flex; align-items:center; gap:8px; }
 .status-dot{ width:12px; height:12px; border-radius:50%; background:#22c55e; }
+.big-font { font-size: 46px !important; font-weight: bold; background: linear-gradient(90deg,#667eea,#764ba2);
+                 -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin:0; }
     </style>
 """,
     unsafe_allow_html=True,
 )
 
 st.markdown(
-    "<div class='header'>AI Stock Prediction Dashboard</div>", unsafe_allow_html=True
+    "<div class='header big-font'>AI Stock Prediction Dashboard</div>", unsafe_allow_html=True
 )
 st.markdown(
-    "<div class='subtle'>Yahoo Finance + TwelveData API + simple LSTM</div>",
+    "<div class='subtle'>Yahoo Finance + simple LSTM — small demo (not financial advice)</div>",
     unsafe_allow_html=True,
 )
 
@@ -221,6 +223,11 @@ with st.sidebar:
                 {"name": h.get("Security Name", ""), "symbol": h.get("Symbol", "")}
                 for h in hits
             ]
+            for opt in company_options:
+                if st.button(f"{opt['name']} ({opt['symbol']})", use_container_width=True):
+                    st.session_state.company_name = opt["name"]
+                    st.session_state.company_symbol = opt["symbol"]
+                    st.rerun()
         except Exception as e:
             st.error(f"Algolia search error: {e}")
 
@@ -273,6 +280,12 @@ with st.sidebar:
     epochs = st.slider("Training epochs", 5, 200, 35)
     st.markdown("---")
     st.caption("Demo trains on CPU. Not financial advice.")
+    # ────────────────────── SAFETY CHECK – DO NOT PUT ANYTHING ABOVE THIS ──────────────────────
+    if 'symbol' not in locals() and st.session_state.get("company_symbol"):
+        symbol = st.session_state["company_symbol"]
+    elif 'symbol' not in locals():
+        symbol = None
+    # ────────────────────── NOW "symbol" ALWAYS EXISTS ──────────────────────
 
 
 # ---------------------------
@@ -307,6 +320,30 @@ if run:
     dates = close.index
     close_vals = close.values.reshape(-1, 1).astype(np.float32)
     latest_price = float(close_vals[-1, 0])
+     # ─────── 4 SAFE METRIC CARDS ───────
+    c1, c2, c3, c4 = st.columns(4)
+
+   # Ensure scalars
+    latest_price = float(latest_price)
+    close_21d = float(close.iloc[-21])
+    
+    # 1M return
+    ret_1m = 0.0
+    if len(close) > 21:
+        ret_1m = (latest_price / close_21d - 1) * 100
+    
+    # Volatility (safe)
+    vol = 0.0
+    returns = close.pct_change().dropna()
+    if len(returns) > 20:
+        vol = float(returns.rolling(20).std().iloc[-1])  # ensure scalar
+        vol = vol * np.sqrt(252) * 100
+    
+    c1.metric("1M Return", f"{ret_1m:+.2f}%", delta=f"{ret_1m:+.1f}%" if abs(ret_1m) > 0.01 else None)
+    c2.metric("Volatility", f"{vol:.1f}%" if vol > 0 else "—")
+    c3.metric("52W High", f"₹{float(close.max()):.2f}")
+    c4.metric("Latest Price", f"₹{latest_price:.2f}")
+
     X, y, scaler, scaled_all = prepare_sequences(close_vals, seq=seq_len)
 
     if X.ndim != 3 or X.shape[2] != 1:
@@ -501,4 +538,4 @@ if run:
     )
     st.table(display_df)
 
-st.caption("Demo app — Not financial advice. Data via Yahoo Finance.")
+st.caption("Demo app — Not financial advice. Data via Yahoo Finance & TwelveData API.")
